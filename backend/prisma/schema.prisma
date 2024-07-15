@@ -8,15 +8,15 @@ generator client {
 }
 
 model User {
-  userId       Int      @id @default(autoincrement())
-  email    String   @unique
+  id       Int      @id @default(autoincrement())
+  username String   @unique
   password String
   active   Int     @default(1)
 
 }
 
 model Product {
-  productId       Int      @id @default(autoincrement())
+  id       Int      @id @default(autoincrement())
   productName     String
   price    Float
   createdAt  DateTime   @default(now())

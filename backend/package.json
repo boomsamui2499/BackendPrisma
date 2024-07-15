@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "ts-node-dev src/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,5 +22,10 @@
     "@types/jsonwebtoken": "^9.0.6",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.5.3"
-  }
+  },
+"prisma": {
+  "schema": "./prisma/schema.prisma"
+}
+
+
 }
