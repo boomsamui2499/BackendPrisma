@@ -53,5 +53,52 @@ router.get('/show/:id', authenticate, async (req, res) => {
   res.json(product);
 });
 
+router.put('/update/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { productName, price } = req.body;
+
+  const product = await prisma.product.findUnique({ where: { id: parseInt(id) } });
+
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  const updatedProduct = await prisma.product.update({
+    where: { id: parseInt(id) },
+    data: { productName, price },
+  });
+
+  res.json(updatedProduct);
+});
+
+router.put('/softDelete/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const product = await prisma.product.findUnique({ where: { id: parseInt(id) } });
+
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  const updatedProduct = await prisma.product.update({
+    where: { id: parseInt(id) },
+    data: { active:0},
+  });
+
+  res.json({ message: 'Product softDelete' });
+});
+
+router.delete('/delete/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+
+  const product = await prisma.product.findUnique({ where: { id: parseInt(id) } });
+
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  await prisma.product.delete({ where: { id: parseInt(id) } });
+
+  res.json({ message: 'Product delete' });
+});
 
 export default router;
