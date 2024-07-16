@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
-import { body, validationResult } from "express-validator";
+import { body, validationResult, param } from "express-validator";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -69,25 +69,31 @@ router.get("/show", authenticate, async (req, res) => {
 
   res.json(products);
 });
+router.get(
+  "/show/:id",
+  authenticate,
+  param("id").isInt().withMessage("ID must be an integer"),
+  validationErrors,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
 
-router.get("/show/:id", authenticate, async (req, res) => {
-  const { id } = req.params;
+    const product = await prisma.product.findUnique({
+      where: { id: parseInt(id) },
+    });
 
-  const product = await prisma.product.findUnique({
-    where: { id: parseInt(id) },
-  });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
-  if (!product) {
-    return res.status(404).json({ error: "Product not found" });
+    res.json(product);
   }
-
-  res.json(product);
-});
-
+);
 router.put(
   "/update/:id",
   authenticate,
   [
+    param("id").isInt().withMessage("ID must be an integer"),
+
     body("productName").isString().withMessage("Name must be a string"),
     body("price")
       .isFloat({ gt: 0 })
@@ -116,38 +122,27 @@ router.put(
   }
 );
 
-router.put("/softDelete/:id", authenticate, async (req, res) => {
-  const { id } = req.params;
-  const product = await prisma.product.findUnique({
-    where: { id: parseInt(id) },
-  });
+router.delete(
+  "/delete/:id",
+  authenticate,
+  param("id").isInt().withMessage("ID must be an integer"),
+  validationErrors,
+  async (req, res) => {
+    const { id } = req.params;
+    const product = await prisma.product.findUnique({
+      where: { id: parseInt(id) },
+    });
 
-  if (!product) {
-    return res.status(404).json({ error: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    await prisma.product.update({
+      where: { id: parseInt(id) },
+      data: { active: 0 },
+    });
+
+    res.json({ message: "Product delete" });
   }
-
-  const updatedProduct = await prisma.product.update({
-    where: { id: parseInt(id) },
-    data: { active: 0 },
-  });
-
-  res.json({ message: "Product softDelete" });
-});
-
-router.delete("/delete/:id", authenticate, async (req, res) => {
-  const { id } = req.params;
-
-  const product = await prisma.product.findUnique({
-    where: { id: parseInt(id) },
-  });
-
-  if (!product) {
-    return res.status(404).json({ error: "Product not found" });
-  }
-
-  await prisma.product.delete({ where: { id: parseInt(id) } });
-
-  res.json({ message: "Product delete" });
-});
-
+);
 export default router;
