@@ -41,7 +41,6 @@ router.post(
   authenticate,
   [
     body("productName").isString().withMessage("Name must be a string"),
-    // .isLength({ min: 5,max:10 }).withMessage('Name must be at least 5 characters long'),
     body("price")
       .isFloat({ gt: 0 })
       .withMessage("Price must be a number greater than 0"),
