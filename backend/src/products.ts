@@ -29,7 +29,11 @@ const authenticate = (
     next();
   });
 };
-const validationErrors = (req: Request, res: Response, next: NextFunction) => {
+const handleValidationErrors = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -45,7 +49,7 @@ router.post(
       .isFloat({ gt: 0 })
       .withMessage("Price must be a number greater than 0"),
   ],
-  validationErrors,
+  handleValidationErrors,
   async (req: AuthenticatedRequest, res: Response) => {
     const { productName, price } = req.body;
 
@@ -72,7 +76,7 @@ router.get(
   "/show/:id",
   authenticate,
   param("id").isInt().withMessage("ID must be an integer"),
-  validationErrors,
+  handleValidationErrors,
   async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
@@ -98,7 +102,7 @@ router.put(
       .isFloat({ gt: 0 })
       .withMessage("Price must be a number greater than 0"),
   ],
-  validationErrors,
+  handleValidationErrors,
 
   async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
@@ -125,7 +129,7 @@ router.delete(
   "/delete/:id",
   authenticate,
   param("id").isInt().withMessage("ID must be an integer"),
-  validationErrors,
+  handleValidationErrors,
   async (req, res) => {
     const { id } = req.params;
     const product = await prisma.product.findUnique({
