@@ -1,38 +1,103 @@
-import { Router } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { Router, Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { body, validationResult } from "express-validator";
 
 const router = Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET!;
-router.post('/  ', async (req, res) => {
-  const { username, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  try {
-    const user = await prisma.user.create({
-      data: { username, password: hashedPassword },
-    });
-    res.status(201).json(user);
-  } catch (error) {
-    res.status(400).json({ error: 'Username already exists' });
+
+const handleValidationErrors = (
+  req: Request,
+  res: Response,
+  next: Function
+) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
-});
+  next();
+};
 
-router.post('/signin', async (req, res) => {
-  const { username, password } = req.body;
-  const user = await prisma.user.findUnique({ where: { username } });
+router.post(
+  "/signup",
+  [
+    body("username")
+      .isString()
+      .withMessage("Username must be a string")
+      .isLength({ min: 4, max: 20 })
+      .withMessage("Username must be between 4 and 20 characters long"),
+    body("password")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters long"),
+  ],
+  handleValidationErrors,
+  async (req: Request, res: Response) => {
+    const { username, email, password } = req.body;
 
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ error: 'Invalid credentials' });
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await prisma.user.create({
+        data: {
+          username,
+          password: hashedPassword,
+        },
+      });
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.status(201).json({ token });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to sign up user" });
+    }
   }
+);
 
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
-  res.json({ token });
-});
+router.post(
+  "/signin",
+  [
+    body("username")
+      .isString()
+      .withMessage("Username must be a string")
+      .isLength({ min: 4, max: 20 })
+      .withMessage("Username must be between 4 and 20 characters long"),
+    body("password")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 6 characters long"),
+  ],
+  handleValidationErrors,
+  async (req: Request, res: Response) => {
+    const { username, password } = req.body;
 
-router.post('/signout', (req, res) => {
-  res.json({ message: 'Sign out successful' });
+    try {
+      const user = await prisma.user.findUnique({ where: { username } });
+
+      if (!user) {
+        return res.status(400).json({ error: "Invalid username or password" });
+      }
+
+      const validPassword = await bcrypt.compare(password, user.password);
+
+      if (!validPassword) {
+        return res.status(400).json({ error: "Invalid username or password" });
+      }
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.json({ token });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to sign in user" });
+    }
+  }
+);
+
+router.post("/signout", (req: Request, res: Response) => {
+  res.json({ message: "Sign out successful" });
 });
 
 export default router;
